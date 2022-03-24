@@ -49,7 +49,7 @@ class Conv2DBlock(BaseBlock):
 
         h, w, in_channels, out_channels = shape
         _seq = collections.OrderedDict([
-            ('conv', nn.Conv2d(in_channels, out_channels, kernel_size=(h, w), stride=stride, padding=padding))
+            ('conv', nn.Conv2d(in_channels, out_channels, kernel_size=(h, w), stride=stride, padding_mode=padding))
         ])
 
         _bn = params.get('batch_norm')

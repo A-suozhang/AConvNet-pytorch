@@ -3,8 +3,17 @@ from skimage.util import shape
 import numpy as np
 import tqdm
 
+from skimage import io
+import torch
+import tqdm
+
+import json
 import glob
 import os
+
+# import utils.common as common
+project_root = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
 
 target_name_soc = ('2S1', 'BMP2', 'BRDM2', 'BTR60', 'BTR70', 'D7', 'T62', 'T72', 'ZIL131', 'ZSU234')
 target_name_eoc_1 = ('2S1', 'BRDM2', 'T72', 'ZSU234')
@@ -55,15 +64,54 @@ serial_number = {
 }
 
 
-class MSTAR(object):
+class MSTAR(torch.utils.data.Dataset):
 
-    def __init__(self, name='soc', is_train=False, use_phase=False, chip_size=94, patch_size=88, stride=40):
+    def __init__(self, name='soc', is_train=False, use_phase=False, chip_size=94, patch_size=88, stride=40, transform=None):
         self.name = name
         self.is_train = is_train
         self.use_phase = use_phase
         self.chip_size = chip_size
         self.patch_size = patch_size
         self.stride = stride
+
+        self.images = []
+        self.labels = []
+        self.serial_number = []
+
+        self.transform = transform
+        mode = 'train' if self.is_train else 'test'
+        path = 'dataset'
+
+        image_list = glob.glob(os.path.join(project_root, path, f'{self.name}/{mode}/*/*.npy'))
+        label_list = glob.glob(os.path.join(project_root, path, f'{self.name}/{mode}/*/*.json'))
+        self.image_list = sorted(image_list, key=os.path.basename)
+        self.label_list = sorted(label_list, key=os.path.basename)
+        # for image_path, label_path in tqdm.tqdm(zip(image_list, label_list), desc=f'load {mode} data set'):
+            # self.images.append(np.load(image_path))
+
+            # with open(label_path, mode='r', encoding='utf-8') as f:
+                # _label = json.load(f)
+
+            # self.labels.append(_label['class_id'])
+            # self.serial_number.append(_label['serial_number'])
+
+    def __len__(self):
+        assert len(self.image_list) == len(self.label_list)
+        return len(self.image_list)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        _image = np.load(self.image_list[idx])
+        with open(self.label_list[idx], mode='r', encoding='utf-8') as f:
+            _label = json.load(f)
+        _serial_number = _label['serial_number']
+
+        if self.transform:
+            _image = self.transform(_image)
+
+        return _image, _label['class_id'], _serial_number
 
     def read(self, path):
         f = open(path, 'rb')

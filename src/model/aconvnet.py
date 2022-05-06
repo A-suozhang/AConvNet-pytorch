@@ -38,6 +38,8 @@ class AConvNet(nn.Module):
 
     def forward(self, x):
         x = self.layer1(x)
+        self.intermediate_act = x
+        print('saved intermediate')
         x = self.pool1(x)
         x = self.layer2(x)
         x = self.pool2(x)
